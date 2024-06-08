@@ -4,8 +4,11 @@ import java.net.InetAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.subethamail.smtp.auth.LoginAuthenticationHandlerFactory;
 import org.subethamail.smtp.helper.SimpleMessageListenerAdapter;
 import org.subethamail.smtp.server.SMTPServer;
+
+import com.nilhcem.fakesmtp.auth.SimpleUsernamePasswordValidator;
 import com.nilhcem.fakesmtp.core.exception.BindPortException;
 import com.nilhcem.fakesmtp.core.exception.OutOfRangePortException;
 
@@ -18,10 +21,11 @@ import com.nilhcem.fakesmtp.core.exception.OutOfRangePortException;
 public enum SMTPServerHandler {
 	INSTANCE;
 
+	private final String SMTP_ENABLE_AUTH = "SMTP_ENABLE_AUTH";
 	private static final Logger LOGGER = LoggerFactory.getLogger(SMTPServerHandler.class);
 	private final MailSaver mailSaver = new MailSaver();
 	private final MailListener myListener = new MailListener(mailSaver);
-	private final SMTPServer smtpServer = new SMTPServer(new SimpleMessageListenerAdapter(myListener), new SMTPAuthHandlerFactory());
+	private SMTPServer smtpServer = null;
 
 	SMTPServerHandler() {
 	}
@@ -38,9 +42,9 @@ public enum SMTPServerHandler {
 	public void startServer(int port, InetAddress bindAddress) throws BindPortException, OutOfRangePortException {
 		LOGGER.debug("Starting server on port {}", port);
 		try {
-			smtpServer.setBindAddress(bindAddress);
-			smtpServer.setPort(port);
-			smtpServer.start();
+			getSmtpServer().setBindAddress(bindAddress);
+			getSmtpServer().setPort(port);
+			getSmtpServer().start();
 		} catch (RuntimeException exception) {
 			if (exception.getMessage().contains("BindException")) { // Can't open port
 				LOGGER.error("{}. Port {}", exception.getMessage(), port);
@@ -62,9 +66,9 @@ public enum SMTPServerHandler {
 	 * </p>
 	 */
 	public void stopServer() {
-		if (smtpServer.isRunning()) {
+		if (getSmtpServer().isRunning()) {
 			LOGGER.debug("Stopping server");
-			smtpServer.stop();
+			getSmtpServer().stop();
 		}
 	}
 
@@ -83,6 +87,15 @@ public enum SMTPServerHandler {
      * @return the {@code SMTPServer} object.
 	 */
 	public SMTPServer getSmtpServer() {
+		if (this.smtpServer != null) {
+			return this.smtpServer;
+		}
+
+		if (System.getenv(SMTP_ENABLE_AUTH) != null && System.getenv(SMTP_ENABLE_AUTH).equals("true")) {
+			this.smtpServer = new SMTPServer(new SimpleMessageListenerAdapter(myListener), new LoginAuthenticationHandlerFactory(new SimpleUsernamePasswordValidator()));
+		} else {
+			this.smtpServer = new SMTPServer(new SimpleMessageListenerAdapter(myListener), new SMTPAuthHandlerFactory());
+		}
 		return smtpServer;
 	}
 }

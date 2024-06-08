@@ -162,6 +162,20 @@ Full command
     `docker run -ti -d -p 250:25 --privileged=true -v /home/fakesmtp/mail:/output fakesmtp`
 
 
+Auth Support
+----------
+
+For Basic Auth support add the following env variable to your instance 
+
+    SMTP_ENABLE_AUTH="true"
+
+By default the username and password is set to `testuser` and `testuser` if you wish to override that create the following environment variables and set them to username/password you wish to test authentication with.
+
+    SMTP_AUTH_USERNAME="patlego"
+    SMTP_AUTH_PASSWORD="patlego"
+
+
+
 Contact me
 ----------
 
